@@ -1,0 +1,168 @@
+{
+  "best_model": "ResidualNet",
+  "input_features": [
+    "longitude",
+    "latitude",
+    "housing_median_age",
+    "total_rooms",
+    "total_bedrooms",
+    "population",
+    "households",
+    "median_income",
+    "ocean_<1H OCEAN",
+    "ocean_INLAND",
+    "ocean_ISLAND",
+    "ocean_NEAR BAY",
+    "ocean_NEAR OCEAN"
+  ],
+  "categories": [
+    "<1H OCEAN",
+    "INLAND",
+    "ISLAND",
+    "NEAR BAY",
+    "NEAR OCEAN"
+  ],
+  "bedrooms_median": 437.0,
+  "results": [
+    {
+      "model": "ResidualNet",
+      "params": 6401,
+      "epochs": 174,
+      "train_s": 43.67959713935852,
+      "train_R2": 0.8491346836090088,
+      "val_R2": 0.7949967384338379,
+      "test_R2": 0.8198784589767456,
+      "test_RMSE": 48803.34414771185,
+      "test_MAE": 33446.4609375
+    },
+    {
+      "model": "DeepNN",
+      "params": 12545,
+      "epochs": 106,
+      "train_s": 31.55003070831299,
+      "train_R2": 0.8686330318450928,
+      "val_R2": 0.7926644086837769,
+      "test_R2": 0.8135737776756287,
+      "test_RMSE": 49650.108882055836,
+      "test_MAE": 33992.38671875
+    },
+    {
+      "model": "MLP",
+      "params": 1153,
+      "epochs": 109,
+      "train_s": 19.35187268257141,
+      "train_R2": 0.8146606683731079,
+      "val_R2": 0.771160364151001,
+      "test_R2": 0.7985655069351196,
+      "test_RMSE": 51609.97112961797,
+      "test_MAE": 36268.73828125
+    },
+    {
+      "model": "F1plusF2",
+      "params": 594,
+      "epochs": 300,
+      "train_s": 58.65199947357178,
+      "train_R2": 0.7673301100730896,
+      "val_R2": 0.7381566762924194,
+      "test_R2": 0.7684510350227356,
+      "test_RMSE": 55333.49654594403,
+      "test_MAE": 39070.8984375
+    },
+    {
+      "model": "LinearRegressionNet",
+      "params": 17,
+      "epochs": 222,
+      "train_s": 30.443391799926758,
+      "train_R2": 0.675941526889801,
+      "val_R2": 0.6337078809738159,
+      "test_R2": 0.6634838581085205,
+      "test_RMSE": 66706.73057495772,
+      "test_MAE": 48135.140625
+    }
+  ],
+  "reference_hgb": {
+    "R2": 0.8502471988045017,
+    "RMSE": 44499.40332496578,
+    "MAE": 30496.39642888133
+  },
+  "samples": [
+    {
+      "inputs": {
+        "longitude": -119.6500015258789,
+        "latitude": 36.5099983215332,
+        "housing_median_age": 30.0,
+        "total_rooms": 1671.0,
+        "total_bedrooms": 319.0,
+        "population": 966.0,
+        "households": 282.0,
+        "median_income": 3.1333000659942627,
+        "ocean_<1H OCEAN": 0.0,
+        "ocean_INLAND": 1.0,
+        "ocean_ISLAND": 0.0,
+        "ocean_NEAR BAY": 0.0,
+        "ocean_NEAR OCEAN": 0.0,
+        "ocean_proximity": "INLAND"
+      },
+      "actual": 100000.0,
+      "onnx_pred": 76645.0078125
+    },
+    {
+      "inputs": {
+        "longitude": -117.01000213623047,
+        "latitude": 33.970001220703125,
+        "housing_median_age": 18.0,
+        "total_rooms": 4775.0,
+        "total_bedrooms": 886.0,
+        "population": 1868.0,
+        "households": 836.0,
+        "median_income": 2.3355000019073486,
+        "ocean_<1H OCEAN": 0.0,
+        "ocean_INLAND": 1.0,
+        "ocean_ISLAND": 0.0,
+        "ocean_NEAR BAY": 0.0,
+        "ocean_NEAR OCEAN": 0.0,
+        "ocean_proximity": "INLAND"
+      },
+      "actual": 118800.0,
+      "onnx_pred": 109054.1640625
+    },
+    {
+      "inputs": {
+        "longitude": -118.37000274658203,
+        "latitude": 34.150001525878906,
+        "housing_median_age": 29.0,
+        "total_rooms": 2630.0,
+        "total_bedrooms": 617.0,
+        "population": 1071.0,
+        "households": 573.0,
+        "median_income": 3.3668999671936035,
+        "ocean_<1H OCEAN": 1.0,
+        "ocean_INLAND": 0.0,
+        "ocean_ISLAND": 0.0,
+        "ocean_NEAR BAY": 0.0,
+        "ocean_NEAR OCEAN": 0.0,
+        "ocean_proximity": "<1H OCEAN"
+      },
+      "actual": 376100.0,
+      "onnx_pred": 375534.59375
+    }
+  ],
+  "capped_rows": 141,
+  "mae_uncapped": 31784.939453125,
+  "mae_capped": 68267.734375,
+  "mean_resid_capped": 67623.7890625,
+  "importance": {
+    "log_population": 0.042547833919525144,
+    "log_households": 0.05727838277816773,
+    "housing_median_age": 0.0603256344795227,
+    "ocean_proximity (one-hot)": 0.1123537540435791,
+    "log_rooms_per_household": 0.12816026210784912,
+    "bedrooms_per_room": 0.15113176107406617,
+    "log_population_per_household": 0.17678154706954957,
+    "log_total_rooms": 0.3781223654747009,
+    "median_income": 0.5420692920684814,
+    "log_total_bedrooms": 0.6176324129104614,
+    "longitude": 1.0080116033554076,
+    "latitude": 2.274811577796936
+  }
+}

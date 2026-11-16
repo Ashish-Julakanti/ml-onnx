@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>House values and customer churn, predicted in your browser</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;800&display=swap" rel="stylesheet">
+  <!-- ONNX Runtime Web (pinned version), then the page logic -->
+  <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.1/dist/ort.min.js"></script>
+  <script src="index.js"></script>
+  <style>
+    :root {
+      --paper: #EEF1F4;
+      --surface: #FFFFFF;
+      --ink: #17212B;
+      --muted: #56636F;
+      --line: #CED6DD;
+      --field: #F7F9FA;
+      --house: #1F5F8B;
+      --stay: #2D7A57;
+      --leave: #B3261E;
+      --focus: #1F5F8B;
+      color-scheme: light;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --paper: #10161C; --surface: #18212A; --ink: #E6ECF1; --muted: #9AA8B4;
+        --line: #2C3946; --field: #121A21; --house: #6FA8D6; --stay: #5DBB8E; --leave: #F07167;
+        --focus: #8CBDE3; color-scheme: dark;
+      }
+    }
+    :root[data-theme="dark"] {
+      --paper: #10161C; --surface: #18212A; --ink: #E6ECF1; --muted: #9AA8B4;
+      --line: #2C3946; --field: #121A21; --house: #6FA8D6; --stay: #5DBB8E; --leave: #F07167;
+      --focus: #8CBDE3; color-scheme: dark;
+    }
+    :root { box-sizing: border-box; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+    *, *::before, *::after { box-sizing: inherit; }
+    html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+    body {
+      margin: 0; background: var(--paper); color: var(--ink);
+      font-family: "Public Sans", "Segoe UI", system-ui, -apple-system, Arial, sans-serif;
+      font-size: 16px; line-height: 1.5;
+    }
+    .wrap { max-width: 1180px; margin: 0 auto; padding: 40px 24px 56px; }
+
+    header { max-width: 760px; margin-bottom: 32px; }
+    h1 { font-size: clamp(1.9rem, 4vw, 2.9rem); line-height: 1.08; font-weight: 800; letter-spacing: -0.02em; margin: 0 0 14px; }
+    .lede { color: var(--muted); font-size: 1.06rem; margin: 0; max-width: 66ch; }
+    #status { margin-top: 14px; font-size: 0.92rem; color: var(--muted); }
+    #status.error { color: var(--leave); font-weight: 600; }
+
+    .tools { display: grid; grid-template-columns: 1fr; gap: 24px; align-items: start; }
+    @media (min-width: 1000px) { .tools { grid-template-columns: 1fr 1fr; } }
+
+    .tool {
+      background: var(--surface); border: 1px solid var(--line); border-top: 5px solid var(--ink);
+      border-radius: 4px; padding: 24px 24px 20px;
+    }
+    .tool.house { border-top-color: var(--house); }
+    .tool h2 { font-size: 1.35rem; line-height: 1.2; font-weight: 800; margin: 0 0 6px; letter-spacing: -0.01em; }
+    .tool > p.what { margin: 0 0 18px; color: var(--muted); max-width: 60ch; }
+
+    fieldset { border: 0; margin: 0 0 16px; padding: 0; }
+    legend { font-weight: 600; font-size: 0.95rem; padding: 0; margin-bottom: 8px; }
+    .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 16px; }
+    @media (max-width: 520px) { .grid { grid-template-columns: 1fr; } }
+    label.field { display: flex; flex-direction: column; gap: 4px; font-size: 0.9rem; color: var(--muted); }
+    label.field span.hint { font-size: 0.8rem; }
+    input[type="number"], select {
+      font: inherit; font-size: 1rem; color: var(--ink); background: var(--field);
+      border: 1px solid var(--line); border-radius: 3px; padding: 8px 10px; width: 100%;
+      font-variant-numeric: tabular-nums;
+    }
+    input[type="number"][aria-invalid="true"] { border-color: var(--leave); }
+    .checks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 16px; }
+    @media (max-width: 520px) { .checks { grid-template-columns: 1fr; } }
+    label.check { display: flex; gap: 8px; align-items: center; font-size: 0.95rem; }
+    label.check input { width: 18px; height: 18px; accent-color: var(--ink); }
+    label.check.disabled { color: var(--muted); opacity: 0.6; }
+
+    .actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 4px 0 18px; }
+    button {
+      font: inherit; font-weight: 600; border-radius: 3px; cursor: pointer; padding: 10px 18px;
+      border: 1px solid var(--ink); background: var(--ink); color: var(--surface);
+    }
+    button.quiet { background: transparent; color: var(--ink); border-color: var(--line); font-weight: 500; padding: 7px 12px; font-size: 0.9rem; }
+    button:disabled { opacity: 0.5; cursor: progress; }
+    :focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+    .samples { font-size: 0.9rem; color: var(--muted); }
+
+    .readout { border-top: 1px solid var(--line); padding-top: 18px; min-height: 150px; }
+    .readout .empty { color: var(--muted); margin: 0; }
+    .big { font-size: clamp(2.6rem, 6vw, 3.8rem); font-weight: 800; line-height: 1; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+    .house .big { color: var(--house); }
+    .caption { margin: 8px 0 14px; font-size: 1rem; }
+    .verdict { font-weight: 800; }
+    .verdict.leave { color: var(--leave); }
+    .verdict.stay { color: var(--stay); }
+    .scale { position: relative; height: 10px; background: var(--field); border: 1px solid var(--line); border-radius: 2px; margin: 26px 0 6px; }
+    .scale .fill { position: absolute; left: 0; top: 0; bottom: 0; background: var(--house); transition: width .35s ease; }
+    .scale .fill.leave { background: var(--leave); }
+    .scale .fill.stay { background: var(--stay); }
+    .scale .tick { position: absolute; top: -8px; bottom: -8px; width: 2px; background: var(--ink); }
+    .scale .tick-label { position: absolute; top: -26px; transform: translateX(-50%); font-size: 0.78rem; white-space: nowrap; color: var(--ink); }
+    .scale-ends { display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+    .note { font-size: 0.88rem; color: var(--muted); margin: 10px 0 0; }
+    .check-row { font-size: 0.88rem; margin: 10px 0 0; padding: 8px 10px; background: var(--field); border-left: 3px solid var(--line); }
+    .model-facts { margin: 16px 0 0; font-size: 0.86rem; color: var(--muted); }
+
+    footer { margin-top: 36px; max-width: 760px; color: var(--muted); font-size: 0.95rem; }
+    footer h2 { font-size: 1.05rem; color: var(--ink); margin: 0 0 6px; }
+    footer p { margin: 0 0 10px; }
+    a { color: var(--house); }
+    @media (prefers-reduced-motion: reduce) { .scale .fill { transition: none; } }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>House values and customer churn, predicted in your browser</h1>
+      <p class="lede">Two PyTorch models, exported to ONNX and run here with ONNX Runtime Web. Change any input and run the model; nothing you type leaves this page.</p>
+      <p id="status" role="status">Loading the two models…</p>
+    </header>
+
+    <main class="tools">
+      <!-- Regression -->
+      <section class="tool house" aria-labelledby="house-title">
+        <h2 id="house-title">Estimate a block group’s median house value</h2>
+        <p class="what">California, 1990 census. Enter the figures for one census block group.</p>
+
+        <form id="house-form" novalidate>
+          <fieldset>
+            <legend>Location</legend>
+            <div class="grid">
+              <label class="field">Longitude<input type="number" step="0.01" id="h-longitude" value="-118.39"><span class="hint">−124.35 to −114.31</span></label>
+              <label class="field">Latitude<input type="number" step="0.01" id="h-latitude" value="34.06"><span class="hint">32.54 to 41.95</span></label>
+              <label class="field">Distance to the ocean
+                <select id="h-ocean">
+                  <option value="&lt;1H OCEAN">Under 1 hour from the ocean</option>
+                  <option value="INLAND">Inland</option>
+                  <option value="NEAR OCEAN">Near the ocean</option>
+                  <option value="NEAR BAY">Near the bay</option>
+                  <option value="ISLAND">Island</option>
+                </select>
+              </label>
+            </div>
+          </fieldset>
+          <fieldset>
+            <legend>Homes and people</legend>
+            <div class="grid">
+              <label class="field">Median age of homes (years)<input type="number" step="1" min="1" id="h-age" value="30"></label>
+              <label class="field">Median household income<input type="number" step="0.01" min="0" id="h-income" value="4.5"><span class="hint">In tens of thousands of USD (4.5 = $45,000)</span></label>
+              <label class="field">Total rooms<input type="number" step="1" min="1" id="h-rooms" value="2200"></label>
+              <label class="field">Total bedrooms<input type="number" step="1" min="0" id="h-bedrooms" value="450"></label>
+              <label class="field">Population<input type="number" step="1" min="1" id="h-population" value="1150"></label>
+              <label class="field">Households<input type="number" step="1" min="1" id="h-households" value="420"></label>
+            </div>
+          </fieldset>
+          <div class="actions">
+            <button type="submit" id="house-run">Estimate value</button>
+            <span class="samples">Try a held-out test row:</span>
+            <span id="house-samples"></span>
+          </div>
+        </form>
+
+        <div class="readout" id="house-out" aria-live="polite">
+          <p class="empty">Run the model to see an estimate.</p>
+        </div>
+        <p class="model-facts" id="house-facts"></p>
+      </section>
+
+      <!-- Classification -->
+      <section class="tool churn" aria-labelledby="churn-title">
+        <h2 id="churn-title">Check a customer’s churn risk</h2>
+        <p class="what">Telecom customer accounts. Describe one customer to see how likely they are to cancel.</p>
+
+        <form id="churn-form" novalidate>
+          <fieldset>
+            <legend>Account</legend>
+            <div class="grid">
+              <label class="field">Tenure (months)<input type="number" step="1" min="0" id="c-tenure" value="8"></label>
+              <label class="field">Monthly charges (USD)<input type="number" step="0.01" min="0" id="c-monthly" value="79.5"></label>
+              <label class="field">Total charges to date (USD)<input type="number" step="0.01" min="0" id="c-total" value="640"><span class="hint">About tenure × monthly charges</span></label>
+              <label class="field">Contract
+                <select id="c-contract">
+                  <option>Month-to-month</option><option>One year</option><option>Two year</option>
+                </select>
+              </label>
+              <label class="field">Payment method
+                <select id="c-payment">
+                  <option>Electronic check</option><option>Mailed check</option>
+                  <option>Bank transfer (automatic)</option><option>Credit card (automatic)</option>
+                </select>
+              </label>
+              <label class="field">Gender
+                <select id="c-gender"><option>Female</option><option>Male</option></select>
+              </label>
+            </div>
+            <div class="checks" style="margin-top:12px">
+              <label class="check"><input type="checkbox" id="c-paperless" checked>Paperless billing</label>
+              <label class="check"><input type="checkbox" id="c-senior">Senior citizen</label>
+              <label class="check"><input type="checkbox" id="c-partner">Has a partner</label>
+              <label class="check"><input type="checkbox" id="c-dependents">Has dependents</label>
+            </div>
+          </fieldset>
+          <fieldset>
+            <legend>Services</legend>
+            <div class="grid">
+              <label class="field">Internet service
+                <select id="c-internet"><option>Fiber optic</option><option>DSL</option><option value="No">None</option></select>
+              </label>
+            </div>
+            <div class="checks" style="margin-top:12px">
+              <label class="check"><input type="checkbox" id="c-phone" checked>Phone service</label>
+              <label class="check"><input type="checkbox" id="c-multiline">Multiple lines</label>
+              <label class="check net"><input type="checkbox" id="c-security">Online security</label>
+              <label class="check net"><input type="checkbox" id="c-backup">Online backup</label>
+              <label class="check net"><input type="checkbox" id="c-protection">Device protection</label>
+              <label class="check net"><input type="checkbox" id="c-support">Tech support</label>
+              <label class="check net"><input type="checkbox" id="c-tv" checked>Streaming TV</label>
+              <label class="check net"><input type="checkbox" id="c-movies">Streaming movies</label>
+            </div>
+          </fieldset>
+          <div class="actions">
+            <button type="submit" id="churn-run">Check churn risk</button>
+            <span class="samples">Try a held-out test customer:</span>
+            <span id="churn-samples"></span>
+          </div>
+        </form>
+
+        <div class="readout" id="churn-out" aria-live="polite">
+          <p class="empty">Run the model to see the churn probability.</p>
+        </div>
+        <p class="model-facts" id="churn-facts"></p>
+      </section>
+    </main>
+
+    <footer>
+      <h2>How it works</h2>
+      <p>Each model is a single ONNX file in this repository (<a href="housing_regressor.onnx">housing_regressor.onnx</a>, <a href="churn_classifier.onnx">churn_classifier.onnx</a>). Feature engineering and standardization were built into the PyTorch models before export, so this page only turns your answers into a vector of raw numbers and one-hot columns, then calls the model.</p>
+      <p>Training code, results and figures: <a href="notebooks/Part1_Regression_CaliforniaHousing.ipynb">regression notebook</a> and <a href="notebooks/Part2_Classification_TelcoChurn.ipynb">classification notebook</a>. Regression and classification homework by Ashish Julakanti.</p>
+    </footer>
+  </div>
+</body>
+</html>
