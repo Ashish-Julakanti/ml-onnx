@@ -2,7 +2,7 @@
 
 Homework by Ashish Julakanti. Two complete machine-learning pipelines in PyTorch, each comparing five models, with the best model of each exported to ONNX and served in the browser from GitHub Pages using ONNX Runtime Web.
 
-**Live demo:** `https://<your-github-username>.github.io/<repo-name>/`
+**Live demo:** `https://ashish-julakanti.github.io/ml-onnx/`
 
 ## Results (held-out test sets)
 
